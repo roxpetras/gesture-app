@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Acceleration Example</title>
+        <!-- <script type="text/javascript" src="js/Acceleration.js"></script> -->
+        <script type="text/javascript" src="js/accelerometer.js"></script>
+        <script type="text/javascript" charset="utf-8" src="cordova.js"></script>
+        <script language="javascript" type="text/javascript" src="js/jquery.min.js"></script>
+		<script language="javascript" type="text/javascript" src="js/jquery.jqplot.min.js"></script>
+		<link rel="stylesheet" type="text/css" href="js/jquery.jqplot.css" />
+            
+        
+        <script type="text/javascript" charset="utf-8">
+            // The watch id references the current `watchAcceleration`
+            var watchID = null;
+          	var array =[];
+          	var start =0;
+            var timestamps=[];
+            var initialTimestamp = 0;
+            var initialVelocity = [];
+            var initialPosition = [];
+           	var coordinates = [];
+        	var velocity = [];
+        	var velocity_y = [];
+        	var arrayFiltered=[]; // array with accelerations filtered with exponential filter
+        	
+ 
+            // Wait for device API libraries to load
+            //
+            document.addEventListener("deviceready", onDeviceReady, false);
+            
+            // device APIs are available
+            //
+            function onDeviceReady() {
+                  startWatch();
+                
+            }
+        
+        // Start watching the acceleration
+        //
+        function startWatch() {
+          // Update acceleration every 500 mseconds
+            array=[];
+           var options = { frequency: 500 };
+            
+            watchID = navigator.accelerometer.watchAcceleration(onSuccess, onError, options);
+        }
+  
+        function Write(input1, input2)
+		{
+  	 	 var s = input1 + "," + input2;
+  		
+	 	console.log(s);
+	 	}
+	 	
+	 	
+	 	function calculateInitialCoords(){
+	 		initialTimestamp = timestamps[0]/1000;
+	 		console.log("Timestamp[0] = " + initialTimestamp);
+	 		
+	 		initialVelocity[0] = initialTimestamp*array[0][0];
+	 		initialVelocity[1] =  initialTimestamp*array[0][1];
+	 		
+	 		console.log("V[0] = " + initialVelocity[0] + "," + initialVelocity[1]);
+	 		
+	 		initialPosition[0] = initialTimestamp*initialVelocity[0];
+	 		initialPosition[1] = initialTimestamp*initialVelocity[1];
+	 		
+	 		console.log("X[0] = " + initialPosition[0] + ", Y[0] = " + initialPosition[1]);
+	 		
+	 	}
+	 	
+	 	function calculatePosition(){
+	 	
+	 		var coordItem = [];
+	 		coordItem.push(initialPosition[0]);
+	 		coordItem.push(initialPosition[1] );
+	 		coordinates.push(coordItem);
+	 		
+	 		for( var i =1;i<array.length; i++){
+	 			coordItem = [];
+	 		    
+/*  	 		 coordItem.push(initialVelocity[0]*(timestamps[i]/1000-initialTimestamp) + 0.5 * (array[i][0]*(timestamps[i]* timestamps[i]/1000000 - init)+initialPosition[0]));
+	 		    coordItem.push(initialVelocity[1]*timestamps[i]/1000 + 0.5 * (array[i][1]*timestamps[i]* timestamps[i])/1000000+initialPosition[1]);
+ */ 		  
+ 		  	  
+	 		    coordinates.push(coordItem);
+	 		}
+	 	
+	 	}
+	 	
+	 	// transform from ms -> s
+	 	function modifyTimestamps(){
+	 	
+	 		initialTimestamp = timestamps[0]/1000;
+	 		console.log("Timestamp[0] = " + initialTimestamp);
+	 		for( var i =0;i<timestamps.length; i++){
+	 			timestamps[i] = timestamps[i] /1000;
+	 			console.log("Timestamp["+i+"]= "+ timestamps[i]);
+	 		}
+	 	}
+	 	
+	 	function calculateVelocity(){
+	 		
+	 		velocity[0]=0;
+	 		velocity_y[0]=0;
+	 		
+	 		for( var i =1;i<array.length; i++){
+	 			velocity[i] = velocity[i-1]+arrayFiltered[i-1][0]*(timestamps[i]-timestamps[i-1]);
+	 			velocity_y[i]= velocity_y[i-1]+arrayFiltered[i-1][1]*(timestamps[i]-timestamps[i-1]);
+	 			
+	 			console.log("Velocity ["+i+"] = " + velocity[i]  +" , "+velocity_y[i]);
+	 		}
+	 	}
+	 	
+	 	function calculateCoords(){
+	 	
+	 		var coordItem = [];
+	 		coordItem.push(0);
+	 		coordItem.push(0);
+ 	 		coordinates.push(coordItem);
+ 			
+	 		
+	 		for( var i =1;i<array.length; i++){
+	 			coordItem = [];
+	 			coordItem.push(velocity[i-1]*(timestamps[i]- timestamps[i-1])+coordinates[i-1][0] );
+	 		    coordItem.push(velocity_y[i-1]*(timestamps[i]- timestamps[i-1])+coordinates[i-1][1] );
+/* 	 		    coordItem.push(velocity[i]*timestamps[i] + 0.5 * (array[i][0]*timestamps[i]* timestamps[i]));
+	 		    coordItem.push(velocity[i]*timestamps[i] + 0.5 * (array[i][1]*timestamps[i]* timestamps[i]));
+ */	 		//    Write(arrayFiltered[i-1][0]*(timestamps[i]- timestamps[i-1])+ velocity[i-1],arrayFiltered[i-1][1]*(timestamps[i]- timestamps[i-1])+ velocity_y[i-1]);
+	 		  
+	 		   
+	 		    coordinates.push(coordItem);
+	 		}
+	 		coordinates.splice(0,1);
+	 	}
+        
+        // Stop watching the acceleration
+        //
+        function stopWatch() {
+        	start=0;
+        	var accelerationItem = [];
+        	var arrayCoordinates = [];
+        	
+        	var x = 0;
+        	var y = 0;
+        	var alfa=0.5;
+        	
+        	console.log(array[0]);
+        
+        	
+	       	accelerationItem.push(array[0][0]);
+          	accelerationItem.push(array[0][1]);
+        	
+        	arrayFiltered.push(accelerationItem);
+        	
+        	for( var x=1;x<array.length;x++){
+        	
+        		accelerationItem=[];
+        		accelerationItem.push(alfa*array[x][0]+(1-alfa)*arrayFiltered[x-1][0]);
+        		accelerationItem.push( alfa*array[x][1]+(1-alfa)*arrayFiltered[x-1][1]);
+        	//	console.log("acc item: "+accelerationItem[0]+"," +accelerationItem[1]);
+        		arrayFiltered.push(accelerationItem);
+        		
+        		Write(arrayFiltered[x][0],arrayFiltered[x][1]);
+        		
+        	}
+        	
+        	
+            if (watchID) {
+                navigator.accelerometer.clearWatch(watchID);
+                watchID = null;
+            }
+            
+            modifyTimestamps();
+            calculateVelocity();
+            calculateCoords();
+
+ /* 		calculateInitialCoords();
+ 			calculatePosition();
+   */          
+            $.jqplot('chartdiv', [coordinates],
+			{ 
+			axes: {
+      			  xaxis: {min:-10, max:10 },
+       			  yaxis: {  min:-10, max:10 }
+ 			   }
+ 			});
+        }
+        
+        function clearScreen() {
+            var element = document.getElementById('chartdiv');
+             array =[];
+          	start =0;
+           timestamps=[];
+            initialTimestamp = 0;
+           	coordinates = [];
+        	velocity = [];
+            velocity_y = [];
+            coordinates = [];
+            element.innerHTML = "";
+            arrayFiltered = [];
+            if (watchID) {
+                navigator.accelerometer.clearWatch(watchID);
+                watchID = null;
+            }
+ 
+    
+        }
+        function butonWatch(){
+        	start=1;
+        }
+        // onSuccess: Get a snapshot of the current acceleration
+        //
+        function onSuccess(acceleration) {
+        //    var element = document.getElementById('accelerometer');
+         
+           var v_limit = 13;//40;
+           var h_limit = 3;//30;
+           var f_limit = 30;
+           
+        
+	     if (start==1 ) {
+            var accelerationItem = [];
+          	accelerationItem.push(acceleration.x);
+          	accelerationItem.push(acceleration.z-9.81);
+          	
+           	console.log("movement");
+          	console.log("====================");
+          	 console.log("Acceleration X: " + acceleration.x         + "<br />" +
+      		  "Acceleration Y: " + acceleration.y         + "<br />" +
+        	  "Acceleration Z: " + (acceleration.z-9.81)  + "<br />" +
+        	  accelerationItem[0]+ "," + accelerationItem[1]
+      	    );
+  			timestamps.push(acceleration.timestamp);
+           	 array.push(accelerationItem);
+           	 
+        } /* else if (acceleration.x >= h_limit || acceleration.x <= -h_limit) {
+             var accelerationItem = [];
+          	accelerationItem.push(acceleration.x);
+          	accelerationItem.push(acceleration.z-9.81);
+          	console.log("x movement");
+          	          	console.log("====================");
+          	 console.log("Acceleration X: " + acceleration.x         + "<br />" +
+      		  "Acceleration Y: " + acceleration.y         + "<br />" +
+        	  "Acceleration Z: " + acceleration.z         + "<br />" );
+         	 array.push(accelerationItem);
+          	    	
+           } */
+           
+         
+         }
+        
+        
+        function sendAlert(message) {
+             var user = 'User 2';
+             
+             var http = new XMLHttpRequest();
+             var url = "http://pc-rpetras:8080/Test/rest/Hello";
+             var params = "user=" + user + "&action=" + message;
+             http.open("POST", url, true);
+             
+             var element = document.getElementById('accelerometer');
+             
+             //Send the proper header information along with the request
+             http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+             
+             http.onreadystatechange = function() {//Call a function when the state changes.
+                 if(http.readyState == 4 && http.status == 200) {
+                     element.innerHTML += 'Message sent successfull' + '<br />' ;
+                 }
+             }
+             http.send(params);
+        }
+ 
+       
+        // onError: Failed to get the acceleration
+        //
+        function onError() {
+            alert('onError!');
+        }
+        
+            </script>
+    </head>
+    <body>
+        <br />
+        <br />
+        <input type="button" value="start" style="width:80px; height:80px" onClick ="startWatch();" />
+        <input type="button" value="stop" style="width:80px; height:80px" onClick ="stopWatch();" />
+        <input type="button" value="clear" style="width:80px; height:80px" onClick ="clearScreen();" />
+          <input type="button" value="buton" style="width:80px; height:80px" onClick ="butonWatch();" />
+        
+ <!--        <div id="accelerometer">Waiting for accelerometer...</div> -->
+		<div id="chartdiv" style="height:400px;width:300px; "></div>
+    </body>
+</html>
